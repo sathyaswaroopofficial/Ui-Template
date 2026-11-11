@@ -1,0 +1,24 @@
+"""Single source of truth for configuration. All settings come from env vars / .env."""
+
+from functools import lru_cache
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    app_name: str = "{{ project_name }}"
+    environment: str = "development"
+    log_level: str = "INFO"
+    database_url: str = "sqlite:///./app.db"
+    cors_origins: list[str] = ["http://localhost:5173"]
+    api_key: str | None = None
+{%- if project_type == 'ml' %}
+    model_path: str = "models/model.joblib"
+{%- endif %}
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()

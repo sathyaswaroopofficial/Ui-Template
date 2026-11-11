@@ -1,0 +1,71 @@
+# {{ project_name }}: project conventions
+
+{{ description }}
+
+These rules apply to every contributor and every AI session. Follow them exactly; if a rule
+blocks you, ask rather than work around it.
+
+## Layout
+
+```
+apps/api/          FastAPI backend
+  app/core/        shared skeleton: config, db, auth, errors, logging (do not change casually)
+  app/modules/<m>/ one folder per feature module, auto-registered at /api/v1/<m>
+  tests/
+{%- if include_frontend %}
+apps/web/          React + Vite + TypeScript frontend
+  src/app/         shell, router, providers (routes are auto-collected)
+  src/features/<m>/ one folder per feature, mirrors the backend module
+  src/shared/      apiClient, shared components, hooks
+  src/styles/      design tokens + global styles
+{%- endif %}
+{%- if project_type == 'ml' %}
+ml/                ml_core package, configs, pipelines, notebooks (see ml/CLAUDE.md)
+data/ models/      local data and artifacts, NOT committed
+{%- endif %}
+scripts/           new_module.py (generator), check_structure.py (CI guard)
+docs/adr/          architecture decision records
+```
+
+## Commands
+
+- `make setup`: install everything · `make dev-api`{% if include_frontend %} / `make dev-web`{% endif %}: run locally
+- `make check`: lint + tests + structure check. Run before every commit.
+- `make new-module name=<m>` or `/new-module <m>`: scaffold a module. Never hand-create module folders.
+{%- if project_type == 'ml' %}
+- `make train`: train the model from `ml/configs/config.yaml`
+{%- endif %}
+
+## Backend rules
+
+- Layering inside a module: `routes.py` (HTTP only) → `service.py` (business logic) → `repository.py` (DB only). No DB queries in routes, no HTTP concepts in services.
+- Every module has `routes.py`, `service.py`, `schemas.py` and tests in `apps/api/tests/test_<m>.py`.
+- Routes: plural nouns, kebab-case, REST verbs. Mounted automatically at `/api/v1/<module>`.
+- Errors: raise `AppError` subclasses from `app.core.errors`. Never return error dicts manually. The API error shape is always `{"error": {"code", "message"}}`.
+- All non-public routes are protected by `app.core.auth.require_auth` automatically. Only set `PUBLIC = True` in a module's routes.py with a reviewed reason.
+- Config comes only from `app.core.config.get_settings()`; never read `os.environ` directly. New settings also go in `.env.example`.
+- Validate all input with Pydantic schemas. Return response models, never ORM objects directly without `response_model`.
+- Modules do not import each other's internals; call another module's service only through its public functions.
+{%- if include_frontend %}
+
+## Frontend rules
+
+- One feature folder per module: `pages/`, `components/`, `api/`, `routes.tsx`, `index.ts`. Routes are auto-discovered from `routes.tsx`.
+- All HTTP goes through `@/shared/api/apiClient`; server state through React Query hooks in the feature's `api/` folder. Never call `fetch` in components.
+- Import other features only via their `index.ts` (ESLint enforces this).
+- Use shared components (`Button`, `LoadingState`, `EmptyState`, `ErrorState`) and CSS tokens from `styles/tokens.css`. No hardcoded colors or spacing.
+- Every data view handles loading, empty and error states.
+- Accessibility: semantic elements, labels for inputs, keyboard reachable, visible focus.
+- No secrets in frontend code or `VITE_*` variables.
+{%- endif %}
+
+## Testing
+
+- New behaviour needs tests. Backend: pytest with the `client` fixture. {% if include_frontend %}Frontend: Vitest + Testing Library next to the component.{% endif %}
+- Do not mock what you own when an in-memory version is cheap (the test DB is in-memory SQLite).
+
+## Git
+
+- Small branches, frequent PRs, Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`).
+- Record significant technical decisions in `docs/adr/`.
+- Never commit `.env`, data files, model artifacts or credentials.

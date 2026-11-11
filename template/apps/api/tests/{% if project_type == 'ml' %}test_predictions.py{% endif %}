@@ -1,0 +1,28 @@
+import pytest
+from ml_core.inference import Predictor
+from ml_core.training.trainer import train
+from ml_core.utils.config import load_config
+
+from app.modules.predictions.service import get_predictor
+
+
+@pytest.fixture
+def predictor(tmp_path) -> Predictor:
+    train(load_config("ml/configs/config.yaml", {"output_dir": str(tmp_path)}))
+    return Predictor.load(tmp_path / "model.joblib")
+
+
+def test_predict(app, client, predictor):
+    app.dependency_overrides[get_predictor] = lambda: predictor
+    res = client.post("/api/v1/predictions", json={"rows": [[0.1, 0.2, 0.3, 0.4]]})
+    assert res.status_code == 200
+    body = res.json()
+    assert body["model_version"] == predictor.version
+    assert len(body["predictions"]) == 1
+
+
+def test_predict_wrong_shape(app, client, predictor):
+    app.dependency_overrides[get_predictor] = lambda: predictor
+    res = client.post("/api/v1/predictions", json={"rows": [[1.0]]})
+    assert res.status_code == 422
+    assert res.json()["error"]["code"] == "invalid_input"

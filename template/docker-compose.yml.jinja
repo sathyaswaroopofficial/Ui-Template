@@ -1,0 +1,50 @@
+# Full stack locally:  docker compose up --build
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports: ["8000:8000"]
+    env_file: [.env]
+{%- if database == 'postgres' %}
+    environment:
+      DATABASE_URL: postgresql+psycopg://app:app@db:5432/{{ project_slug | replace('-', '_') }}
+    depends_on:
+      db:
+        condition: service_healthy
+{%- endif %}
+{%- if project_type == 'ml' %}
+    volumes:
+      - ./models:/srv/models
+{%- endif %}
+{%- if include_frontend %}
+
+  web:
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host"
+    ports: ["5173:5173"]
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+    depends_on: [api]
+{%- endif %}
+{%- if database == 'postgres' %}
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: {{ project_slug | replace('-', '_') }}
+    ports: ["5432:5432"]
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  db-data:
+{%- endif %}

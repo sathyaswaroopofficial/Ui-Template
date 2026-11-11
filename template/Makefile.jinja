@@ -1,0 +1,65 @@
+# Common tasks. On Windows, run these from Git Bash (or install `make` via `winget install GnuWin32.Make`).
+.PHONY: help setup dev-api dev-web test lint format check new-module gen-api{% if project_type == 'ml' %} train{% endif %}
+
+help:
+	@echo "setup       Install all dependencies"
+	@echo "dev-api     Run the FastAPI backend on :8000"
+{%- if include_frontend %}
+	@echo "dev-web     Run the React frontend on :5173"
+	@echo "gen-api     Regenerate frontend API types from the running backend"
+{%- endif %}
+{%- if project_type == 'ml' %}
+	@echo "train       Train the model (ml/configs/config.yaml)"
+{%- endif %}
+	@echo "test        Run all tests"
+	@echo "lint        Lint and type-check everything"
+	@echo "format      Auto-format code"
+	@echo "check       lint + test + structure check (what CI runs)"
+	@echo "new-module  Scaffold a module: make new-module name=orders"
+
+setup:
+	uv sync
+{%- if include_frontend %}
+	cd apps/web && npm install
+{%- endif %}
+	@test -f .env || cp .env.example .env
+
+dev-api:
+	uv run uvicorn app.main:app --app-dir apps/api --reload --port 8000
+{%- if include_frontend %}
+
+dev-web:
+	cd apps/web && npm run dev
+
+gen-api:
+	cd apps/web && npm run gen:api
+{%- endif %}
+{%- if project_type == 'ml' %}
+
+train:
+	uv run python ml/pipelines/train.py --config ml/configs/config.yaml
+{%- endif %}
+
+test:
+	uv run pytest
+{%- if include_frontend %}
+	cd apps/web && npm test
+{%- endif %}
+
+lint:
+	uv run ruff check .
+	uv run ruff format --check .
+{%- if include_frontend %}
+	cd apps/web && npm run lint && npm run typecheck
+{%- endif %}
+
+format:
+	uv run ruff check --fix .
+	uv run ruff format .
+
+check: lint test
+	uv run python scripts/check_structure.py
+
+new-module:
+	@test -n "$(name)" || (echo "Usage: make new-module name=<module_name>" && exit 1)
+	uv run python scripts/new_module.py $(name)

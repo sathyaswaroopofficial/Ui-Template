@@ -1,0 +1,14 @@
+# Default training config. Copy to configs/experiments/<name>.yaml to try variations.
+seed: 42
+output_dir: models
+
+data:
+  n_samples: 1000
+  n_features: 4
+  n_classes: 2
+  test_size: 0.2
+
+model:
+  name: logistic_regression   # baseline | logistic_regression | random_forest
+  params:
+    C: 1.0

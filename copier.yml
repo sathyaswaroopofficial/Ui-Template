@@ -1,0 +1,58 @@
+# Copier template configuration
+# Usage:  copier copy gh:sathyaswaroopofficial/Ui-Template my-new-project
+# Update: cd my-new-project && copier update
+
+_min_copier_version: "9.0.0"
+_subdirectory: template
+_templates_suffix: .jinja
+_answers_file: .copier-answers.yml
+
+project_name:
+  type: str
+  help: Human-readable project name
+  default: My App
+
+project_slug:
+  type: str
+  help: Machine name (lowercase letters, numbers and dashes)
+  default: "{{ project_name | lower | replace(' ', '-') | replace('_', '-') }}"
+  validator: >-
+    {% if project_slug != project_slug | lower or ' ' in project_slug or '_' in project_slug %}
+    Use lowercase letters, numbers and dashes only
+    {% endif %}
+
+description:
+  type: str
+  help: One-line description of the project
+  default: A full-stack application
+
+author_name:
+  type: str
+  help: Author or team name
+  default: Your Name
+
+github_username:
+  type: str
+  help: GitHub username or team used as default code owner (without @)
+  default: sathyaswaroopofficial
+
+project_type:
+  type: str
+  help: What kind of project is this?
+  choices:
+    "Web app (React + FastAPI)": web
+    "ML app (web app + ml_core training package + prediction API)": ml
+  default: web
+
+include_frontend:
+  type: bool
+  help: Include the React (Vite + TypeScript) frontend?
+  default: true
+
+database:
+  type: str
+  help: Database
+  choices:
+    "SQLite (zero setup, good for starting out)": sqlite
+    "PostgreSQL (production-grade, runs in Docker)": postgres
+  default: sqlite

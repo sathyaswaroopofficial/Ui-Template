@@ -1,0 +1,61 @@
+# {{ project_name }}
+
+{{ description }}
+
+Generated from [Ui-Template](https://github.com/sathyaswaroopofficial/Ui-Template).
+
+## Stack
+
+- **Backend:** FastAPI, SQLAlchemy, Pydantic ({{ 'PostgreSQL' if database == 'postgres' else 'SQLite' }})
+{%- if include_frontend %}
+- **Frontend:** React 18, TypeScript, Vite, React Query, React Router
+{%- endif %}
+{%- if project_type == 'ml' %}
+- **ML:** `ml_core` package (scikit-learn baseline), config-driven training, prediction API
+{%- endif %}
+- **Tooling:** uv, Ruff, pytest{% if include_frontend %}, ESLint, Vitest{% endif %}, GitHub Actions
+
+## Prerequisites
+
+- Python 3.12+ and [uv](https://docs.astral.sh/uv/)
+{%- if include_frontend %}
+- Node.js 20+
+{%- endif %}
+- Optional: Docker (for `docker compose up`){% if database == 'postgres' %}, required for PostgreSQL{% endif %}
+
+## Getting started
+
+```bash
+make setup        # installs Python + Node deps, creates .env
+{%- if project_type == 'ml' %}
+make train        # trains the first model into models/
+{%- endif %}
+make dev-api      # http://localhost:8000/docs
+{%- if include_frontend %}
+make dev-web      # http://localhost:5173 (in a second terminal)
+{%- endif %}
+```
+
+No `make`? Use the commands inside the [Makefile](Makefile) directly, e.g.
+`uv run uvicorn app.main:app --app-dir apps/api --reload`.
+
+## Everyday commands
+
+| Command | What it does |
+|---|---|
+| `make check` | Lint, tests and structure check (same as CI) |
+| `make new-module name=orders` | Scaffold a backend module{% if include_frontend %} + frontend feature{% endif %} |
+{%- if include_frontend %}
+| `make gen-api` | Regenerate TypeScript API types from the running backend |
+{%- endif %}
+| `make format` | Auto-format Python code |
+
+## Project structure
+
+See [CLAUDE.md](CLAUDE.md) for the layout and the conventions every contributor (and AI assistant) follows.
+
+## Updating from the template
+
+```bash
+copier update
+```
